@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MONEY AZ - Plataforma</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0b0f19; color: #f3f4f6; font-family: sans-serif; }
+        .gold-text { color: #d4af37; }
+        .gold-bg { background-color: #d4af37; }
+        .gold-border { border-color: #d4af37; }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <!-- ECRÃ DE AUTENTICAÇÃO (REGISTO / LOGIN) -->
+    <div id="auth-screen" class="w-full max-w-md bg-gray-900 border gold-border rounded-2xl p-6 shadow-2xl">
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold gold-text">MONEY AZ</h1>
+            <p class="text-gray-400 text-sm">Plataforma de Investimentos</p>
+        </div>
+
+        <div class="flex mb-6 bg-gray-800 rounded-lg p-1">
+            <button onclick="switchTab('login')" id="btn-login" class="flex-1 py-2 text-sm font-bold rounded-md gold-bg text-gray-900 transition">Entrar</button>
+            <button onclick="switchTab('register')" id="btn-register" class="flex-1 py-2 text-sm font-bold rounded-md text-gray-400 transition">Registar</button>
+        </div>
+
+        <!-- FORMULÁRIO DE LOGIN -->
+        <form id="form-login" onsubmit="handleLogin(event)" class="space-y-4">
+            <div>
+                <label class="block text-xs text-gray-400 mb-1">Telemóvel</label>
+                <input type="text" id="login-phone" required placeholder="923000000" class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none gold-border text-white">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-400 mb-1">Palavra-passe</label>
+                <input type="password" id="login-pass" required placeholder="••••••••" class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none gold-border text-white">
+            </div>
+            <button type="submit" class="w-full py-3 font-bold gold-bg text-gray-900 rounded-lg shadow-lg hover:opacity-95 transition">Entrar na Conta</button>
+        </form>
+
+        <!-- FORMULÁRIO DE REGISTO -->
+        <form id="form-register" onsubmit="handleRegister(event)" class="space-y-4 hidden">
+            <div>
+                <label class="block text-xs text-gray-400 mb-1">Telemóvel</label>
+                <input type="text" id="reg-phone" required placeholder="923000000" class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none gold-border text-white">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-400 mb-1">Palavra-passe</label>
+                <input type="password" id="reg-pass" required placeholder="••••••••" class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none gold-border text-white">
+            </div>
+            <button type="submit" class="w-full py-3 font-bold gold-bg text-gray-900 rounded-lg shadow-lg hover:opacity-95 transition">Criar Conta (0 Kz)</button>
+        </form>
+    </div>
+
+    <!-- ECRÃ PRINCIPAL DA APLICAÇÃO (OCULTO ATÉ ENTRAR) -->
+    <div id="app-screen" class="w-full max-w-md bg-gray-900 border gold-border rounded-2xl p-6 shadow-2xl hidden">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold gold-text">Painel MONEY AZ</h2>
+            <button onclick="logout()" class="text-xs text-red-400 border border-red-500 px-3 py-1 rounded">Sair</button>
+        </div>
+        <div class="bg-gray-800 p-4 rounded-xl mb-6">
+            <p class="text-xs text-gray-400">Saldo Disponível</p>
+            <p id="user-balance" class="text-2xl font-bold text-white">0.00 Kz</p>
+        </div>
+        <div class="p-4 bg-gray-800 rounded-xl text-center">
+            <p class="text-sm text-gray-300">Conta criada com sucesso! O primeiro saque está bloqueado até ter um depósito aprovado.</p>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tab) {
+            const isLogin = tab === 'login';
+            document.getElementById('form-login').classList.toggle('hidden', !isLogin);
+            document.getElementById('form-register').classList.toggle('hidden', isLogin);
+            document.getElementById('btn-login').className = `flex-1 py-2 text-sm font-bold rounded-md transition ${isLogin ? 'gold-bg text-gray-900' : 'text-gray-400'}`;
+            document.getElementById('btn-register').className = `flex-1 py-2 text-sm font-bold rounded-md transition ${!isLogin ? 'gold-bg text-gray-900' : 'text-gray-400'}`;
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            const phone = document.getElementById('reg-phone').value;
+            const pass = document.getElementById('reg-pass').value;
+
+            let users = JSON.parse(localStorage.getItem('moneyaz_users') || '{}');
+            if(users[phone]) {
+                alert('Este número já está registado!');
+                return;
+            }
+
+            // Conta criada estritamente com 0 Kz e sem depósito aprovado
+            users[phone] = { pass, balance: 0, hasDeposit: false };
+            localStorage.setItem('moneyaz_users', JSON.stringify(users));
+            localStorage.setItem('moneyaz_current', phone);
+
+            alert('Conta criada com sucesso!');
+            showApp(phone);
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const phone = document.getElementById('login-phone').value;
+            const pass = document.getElementById('login-pass').value;
+
+            let users = JSON.parse(localStorage.getItem('moneyaz_users') || '{}');
+            if(!users[phone] || users[phone].pass !== pass) {
+                alert('Telemóvel ou palavra-passe incorretos!');
+                return;
+            }
+
+            localStorage.setItem('moneyaz_current', phone);
+            showApp(phone);
+        }
+
+        function showApp(phone) {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('app-screen').classList.remove('hidden');
+            let users = JSON.parse(localStorage.getItem('moneyaz_users') || '{}');
+            let user = users[phone] || { balance: 0 };
+            document.getElementById('user-balance').innerText = user.balance.toLocaleString() + ' Kz';
+        }
+
+        function logout() {
+            localStorage.removeItem('moneyaz_current');
+            document.getElementById('app-screen').classList.add('hidden');
+            document.getElementById('auth-screen').classList.remove('hidden');
+        }
+
+        // Verificar se já estava logado
+        window.onload = function() {
+            let current = localStorage.getItem('moneyaz_current');
+            if(current) showApp(current);
+        }
+    </script>
+</body>
+</html>
